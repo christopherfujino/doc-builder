@@ -30,11 +30,8 @@ func main() {
 	var config = ConfigOfBytes(configBytes)
 	fmt.Println(len(config.Targets))
 
-	_, env := config.Targets[0].MaybeBuild(&config.Env)
-	fmt.Println(env)
-	// Iterate through targets
-	// Recurse through dependencies, verifying they are up to date
-	// For any target that is not up to date, re-build it
+	_, _ = config.Targets[0].MaybeBuild(&config.Env)
+	//fmt.Println(env)
 }
 
 func findConfigFile(dir string) string {
