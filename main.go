@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"os"
 )
@@ -19,6 +20,29 @@ func Check1(e error) {
 	}
 }
 
+func selectTarget(targets []Target1) Target1 {
+	const noSuchTarget = "__NO_SUCH_TARGET__"
+	var targetPtr = flag.String("target", noSuchTarget,"usage")
+
+	flag.Parse()
+
+	if targetPtr == nil {
+		panic("NPE")
+	}
+
+	if *targetPtr == noSuchTarget {
+		return targets[0]
+	}
+
+	for _, target := range targets {
+		// TODO strip leading "./"
+		if *targetPtr == target.Output {
+			return target
+		}
+	}
+	panic(fmt.Sprintf("There is no target named %s", *targetPtr))
+}
+
 func main() {
 	// Find curring working directory
 	var cwd = Check2(os.Getwd())
@@ -31,11 +55,19 @@ func main() {
 		targetsMap[target.Output] = target
 	}
 
-	_, _, _ = config.Targets[0].MaybeBuild(Env{
+	var selectTarget = selectTarget(config.Targets)
+
+	didBuild, _, _ := selectTarget.MaybeBuild(Env{
 		Targets: targetsMap,
 		Variables: &config.Variables,
 	})
 	//fmt.Println(env)
+	var exitCode = 0
+	if didBuild {
+		exitCode = 1
+	}
+
+	os.Exit(exitCode)
 }
 
 func findConfigFile(dir string) string {
