@@ -11,7 +11,7 @@ The following is the config file that created this `README.md` document:
 
 ```json
 {
-  "env": {
+  "variables": {
     "project_name": "doc-builder"
   },
   "targets": [
@@ -19,14 +19,8 @@ The following is the config file that created this `README.md` document:
       "source": "README.tmpl.md",
       "output": "README.md",
       "inputs": [
-        {
-          "source": "assets/intro.md",
-          "output": "#env"
-        },
-        {
-          "source": "dbc.json",
-          "output": "#env"
-        }
+        "assets/intro.md",
+        "dbc.json"
       ]
     }
   ]

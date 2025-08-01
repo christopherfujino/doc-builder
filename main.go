@@ -20,17 +20,21 @@ func Check1(e error) {
 }
 
 func main() {
-	fmt.Println("Hello, world!")
-
 	// Find curring working directory
 	var cwd = Check2(os.Getwd())
 	// Find config file
 	var configFile = findConfigFile(cwd)
 	var configBytes = Check2(os.ReadFile(configFile))
 	var config = ConfigOfBytes(configBytes)
-	fmt.Println(len(config.Targets))
+	var targetsMap = map[string]Target{}
+	for _, target := range config.Targets {
+		targetsMap[target.Output] = target
+	}
 
-	_, _ = config.Targets[0].MaybeBuild(&config.Env)
+	_, _, _ = config.Targets[0].MaybeBuild(Env{
+		Targets: targetsMap,
+		Variables: &config.Variables,
+	})
 	//fmt.Println(env)
 }
 
