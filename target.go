@@ -115,6 +115,8 @@ func (t Target1) MaybeBuild(env Env) (bool, Env, time.Time) {
 		needsBuild = true
 	}
 
+	// TODO must check for source!
+
 	if len(t.Inputs) == 0 {
 		needsBuild = true
 	} else {
