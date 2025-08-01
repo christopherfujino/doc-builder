@@ -1,0 +1,17 @@
+{
+  "env": {
+    "project_name": "doc-builder"
+  },
+	"targets": [
+		{
+			"source": "README.tmpl.md",
+			"output": "README.md",
+			"inputs": [
+        {
+          "source": "assets/intro.md",
+          "output": "#env"
+        }
+      ]
+		}
+	]
+}
