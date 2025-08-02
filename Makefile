@@ -1,6 +1,6 @@
 .PHONY: run
-run: doc-builder
-	./doc-builder
+run: db
+	./db
 
-doc-builder:
-	go build .
+db: *.go go.*
+	go build -o db .

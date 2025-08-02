@@ -16,7 +16,7 @@ The following is the config file that created this `README.md` document:
   },
   "targets": [
     {
-      "source": "README.tmpl.md",
+      "template": "README.tmpl.md",
       "output": "README.md",
       "inputs": [
         "assets/intro.md",

@@ -10,7 +10,7 @@ import (
 
 type Env struct {
 	Targets   map[string]Target
-	Variables *map[string]string
+	Variables map[string]string
 }
 
 type Target interface {
@@ -21,7 +21,7 @@ type Target interface {
 
 // Specified by config
 type Target1 struct {
-	Source string
+	Template string
 	Inputs []string
 	Output string
 }
@@ -48,7 +48,7 @@ func (t Target2) MaybeBuild(env Env) (bool, Env, time.Time) {
 	// We report false so dependees can potentially not rebuild,
 	// but populate env in case they do
 	var sourceBytes = Check2(os.ReadFile(t.Filename))
-	(*env.Variables)[normalizePath(t.Filename)] = strings.TrimSpace(string(sourceBytes))
+	env.Variables[normalizePath(t.Filename)] = strings.TrimSpace(string(sourceBytes))
 
 	return false, env, age
 }
@@ -92,13 +92,21 @@ func normalizePath(path string) string {
 
 func (t Target1) Build(env Env) Env {
 	fmt.Printf("Building %s...\n", t.Output)
-	var sourceBytes = Check2(os.ReadFile(t.Source))
+	if t.Template == "" {
+		var msg = fmt.Sprintf("The target %s does not have a template to build from\n", t.Output)
+		panic(msg)
+	}
+	var templateBytes, err = os.ReadFile(t.Template)
+	if err != nil {
+		var msg = fmt.Sprintf("The template file %s does not exist!\n\n%s", t.Template, err.Error())
+		panic(msg)
+	}
 
 	// https://stackoverflow.com/questions/49933684/prevent-no-value-being-inserted-by-golang-text-template-library
-	var template, err = template.New(t.Source).Option("missingkey=error").Parse(string(sourceBytes))
+	template, err := template.New(t.Template).Option("missingkey=error").Parse(string(templateBytes))
 	if err != nil {
 		panic(
-			fmt.Sprintf("Error interpolating %s\n\n%s\n\nCurrent env was:\n%v", t.Source, err.Error(), *env.Variables),
+			fmt.Sprintf("Error interpolating %s\n\n%s\n\nCurrent env was:\n%v", t.Template, err.Error(), env.Variables),
 		)
 	}
 

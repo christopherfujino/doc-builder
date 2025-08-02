@@ -22,7 +22,7 @@ func Check1(e error) {
 
 func selectTarget(targets []Target1) Target1 {
 	const noSuchTarget = "__NO_SUCH_TARGET__"
-	var targetPtr = flag.String("target", noSuchTarget,"usage")
+	var targetPtr = flag.String("target", noSuchTarget, "usage")
 
 	flag.Parse()
 
@@ -55,15 +55,26 @@ func main() {
 		targetsMap[target.Output] = target
 	}
 
+	if len(config.Targets) == 0 {
+		fmt.Fprintf(
+			os.Stderr,
+			"The config file at \"%s\" does not have any \"targets\" specified\n",
+			configFile,
+		)
+		os.Exit(1)
+	}
+
 	var selectTarget = selectTarget(config.Targets)
 
 	didBuild, _, _ := selectTarget.MaybeBuild(Env{
-		Targets: targetsMap,
-		Variables: &config.Variables,
+		Targets:   targetsMap,
+		Variables: config.Variables,
 	})
 	//fmt.Println(env)
 	var exitCode = 0
 	if didBuild {
+		// Calling `doc-builder` in a CI script is a way to ensure everything is
+		// built, lest it returns 1
 		exitCode = 1
 	}
 
