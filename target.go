@@ -123,7 +123,15 @@ func (t Target1) Build(env Env) Env {
 	}
 
 	var w = Check2(os.Create(t.Output))
-	Check1(template.Execute(w, env.Variables))
+	err = template.Execute(w, env.Variables)
+	if err != nil {
+		// We need to delete the output because it's likely corrupted, with a fresh
+		// timestamp
+		Check1(os.Remove(t.Output))
+		panic(err)
+	} else {
+		Check1(w.Close())
+	}
 	return env
 }
 
