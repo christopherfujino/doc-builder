@@ -2,7 +2,9 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"os"
+	"os/exec"
 	"strings"
 	"text/template"
 	"time"
@@ -21,11 +23,21 @@ type Target interface {
 
 // Specified by config
 type Target1 struct {
-	Template string
+	Template      string
 	templateCache *string
-	Inputs []string
-	Output string
+	Inputs        []string
+	Output        string
+	Filter        string
 }
+
+//func (t Target1) parseFilter() (string, []string) {
+//	var buffer = strings.Builder{}
+//
+//	for i, r := range t.Filter {
+//
+//	}
+//	panic("TODO")
+//}
 
 func (t *Target1) templateString() *string {
 	if t.templateCache != nil {
@@ -111,10 +123,6 @@ func normalizePath(path string) string {
 
 func (t Target1) Build(env Env) Env {
 	fmt.Printf("Building %s...\n", t.Output)
-	if t.Template == "" {
-		var msg = fmt.Sprintf("The target %s does not have a template to build from\n", t.Output)
-		panic(msg)
-	}
 
 	var templateString = *t.templateString()
 	// https://stackoverflow.com/questions/49933684/prevent-no-value-being-inserted-by-golang-text-template-library
@@ -138,16 +146,18 @@ func (t Target1) MaybeBuild(env Env) (bool, Env, time.Time) {
 		needsBuild = true
 	}
 
-	var templateTarget = Target2{Filename: t.Template}
-	var templateTime, templateExists = templateTarget.Age()
-	if templateExists == false {
-		panic(fmt.Sprintf("The template %s for the target %s does not exist!", t.Template, t.Output))
-	}
+	if t.Template != "" {
+		var templateTarget = Target2{Filename: t.Template}
+		var templateTime, templateExists = templateTarget.Age()
+		if templateExists == false {
+			// TODO check if it's an empty string
+			panic(fmt.Sprintf("The template \"%s\" for the target \"%s\" does not exist!", t.Template, t.Output))
+		}
 
-	if templateTime.After(thisTime) {
-		needsBuild = true
+		if templateTime.After(thisTime) {
+			needsBuild = true
+		}
 	}
-
 	if len(t.Inputs) == 0 {
 		needsBuild = true
 	} else {
@@ -170,8 +180,55 @@ func (t Target1) MaybeBuild(env Env) (bool, Env, time.Time) {
 	}
 
 	if needsBuild {
-		env = t.Build(env)
+		// If we're not a template
+		if t.Template == "" {
+			// Check file already exists
+			var _, err = os.Stat(t.Output)
+			if err != nil {
+				// TODO give a friendly message
+				panic(err)
+			}
+			// we don't actually call .Build(), the interesting work happens in this method
+		} else {
+			env = t.Build(env)
+		}
 	}
+
+	// TODO optimize, if we're not an input to another target, we can skip this
+	var bytes = Check2(os.ReadFile(t.Output))
+	var src string
+
+	if t.Filter != "" {
+		var cmd = exec.Command("/bin/sh", "-c", t.Filter)
+		var stdin = Check2(cmd.StdinPipe())
+		var stdout = Check2(cmd.StdoutPipe())
+		stdin.Write(bytes)
+		Check1(stdin.Close())
+		var err = cmd.Start()
+		if err != nil {
+			panic("TODO")
+		}
+		var readBuffer = make([]byte, 256)
+		var stringBuffer = strings.Builder{}
+		for {
+			n, err := stdout.Read(readBuffer)
+			if err == io.EOF {
+				if n > 0 {
+					stringBuffer.Write(readBuffer[:n])
+				}
+				break
+			} else if err != nil {
+				panic(err)
+			}
+			Check2(stringBuffer.Write(readBuffer[:n]))
+		}
+		Check1(cmd.Wait())
+
+		src = strings.TrimSpace(stringBuffer.String())
+	} else {
+		src = strings.TrimSpace(string(bytes))
+	}
+	env.Variables[normalizePath(t.Output)] = src
 
 	return needsBuild, env, thisTime
 }

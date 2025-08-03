@@ -22,6 +22,10 @@ The following is the config file that created this `README.md` document:
         "assets/intro.md",
         "dbc.json"
       ]
+    },
+    {
+      "output": "dbc.json",
+      "filter": "sed 's/\t/  /g'"
     }
   ]
 }
