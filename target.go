@@ -22,8 +22,27 @@ type Target interface {
 // Specified by config
 type Target1 struct {
 	Template string
+	templateCache *string
 	Inputs []string
 	Output string
+}
+
+func (t *Target1) templateString() *string {
+	if t.templateCache != nil {
+		return t.templateCache
+	}
+
+	var templateBytes, err = os.ReadFile(t.Template)
+	if err != nil {
+		var msg = fmt.Sprintf("The template file %s does not exist!\n\n%s", t.Template, err.Error())
+		panic(msg)
+	}
+
+	var s = string(templateBytes)
+
+	t.templateCache = &s
+
+	return &s
 }
 
 // External dependency
@@ -96,14 +115,10 @@ func (t Target1) Build(env Env) Env {
 		var msg = fmt.Sprintf("The target %s does not have a template to build from\n", t.Output)
 		panic(msg)
 	}
-	var templateBytes, err = os.ReadFile(t.Template)
-	if err != nil {
-		var msg = fmt.Sprintf("The template file %s does not exist!\n\n%s", t.Template, err.Error())
-		panic(msg)
-	}
 
+	var templateString = *t.templateString()
 	// https://stackoverflow.com/questions/49933684/prevent-no-value-being-inserted-by-golang-text-template-library
-	template, err := template.New(t.Template).Option("missingkey=error").Parse(string(templateBytes))
+	template, err := template.New(t.Template).Option("missingkey=error").Parse(templateString)
 	if err != nil {
 		panic(
 			fmt.Sprintf("Error interpolating %s\n\n%s\n\nCurrent env was:\n%v", t.Template, err.Error(), env.Variables),
@@ -123,7 +138,15 @@ func (t Target1) MaybeBuild(env Env) (bool, Env, time.Time) {
 		needsBuild = true
 	}
 
-	// TODO must check for source!
+	var templateTarget = Target2{Filename: t.Template}
+	var templateTime, templateExists = templateTarget.Age()
+	if templateExists == false {
+		panic(fmt.Sprintf("The template %s for the target %s does not exist!", t.Template, t.Output))
+	}
+
+	if templateTime.After(thisTime) {
+		needsBuild = true
+	}
 
 	if len(t.Inputs) == 0 {
 		needsBuild = true

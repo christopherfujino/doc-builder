@@ -12,5 +12,8 @@ type Config struct {
 func ConfigOfBytes(data []byte) Config {
 	var c Config
 	Check1(json.Unmarshal(data, &c))
+	if c.Variables == nil {
+		c.Variables = map[string]string{}
+	}
 	return c
 }
