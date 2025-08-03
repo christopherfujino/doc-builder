@@ -30,15 +30,6 @@ type Target1 struct {
 	Filter        string
 }
 
-//func (t Target1) parseFilter() (string, []string) {
-//	var buffer = strings.Builder{}
-//
-//	for i, r := range t.Filter {
-//
-//	}
-//	panic("TODO")
-//}
-
 func (t *Target1) templateString() *string {
 	if t.templateCache != nil {
 		return t.templateCache
@@ -122,8 +113,6 @@ func normalizePath(path string) string {
 }
 
 func (t Target1) Build(env Env) Env {
-	fmt.Printf("Building %s...\n", t.Output)
-
 	var templateString = *t.templateString()
 	// https://stackoverflow.com/questions/49933684/prevent-no-value-being-inserted-by-golang-text-template-library
 	template, err := template.New(t.Template).Option("missingkey=error").Parse(templateString)
@@ -139,10 +128,11 @@ func (t Target1) Build(env Env) Env {
 }
 
 func (t Target1) MaybeBuild(env Env) (bool, Env, time.Time) {
-	fmt.Printf("Evaluating if %s needs a build...\n", t.Output)
+	Trace("Evaluating if %s needs a build...\n", t.Output)
 	var needsBuild = false
 	var thisTime, ok = t.Age()
 	if !ok {
+		Trace("Target %s needs to be built because it does not exist\n", t.Output)
 		needsBuild = true
 	}
 
@@ -155,12 +145,11 @@ func (t Target1) MaybeBuild(env Env) (bool, Env, time.Time) {
 		}
 
 		if templateTime.After(thisTime) {
+			Trace("Target %s needs to be built because template %s is newer\n", t.Output, t.Template)
 			needsBuild = true
 		}
 	}
-	if len(t.Inputs) == 0 {
-		needsBuild = true
-	} else {
+	if len(t.Inputs) > 0 {
 		for _, inputName := range t.Inputs {
 			var didBuild bool
 			var inputTime time.Time
@@ -174,6 +163,7 @@ func (t Target1) MaybeBuild(env Env) (bool, Env, time.Time) {
 				panic("Are you on Windows?!")
 			}
 			if didBuild || (inputTime.After(thisTime)) {
+				Trace("Target %s needs to be built because of input %s\n", t.Output, inputName)
 				needsBuild = true
 			}
 		}
@@ -199,6 +189,7 @@ func (t Target1) MaybeBuild(env Env) (bool, Env, time.Time) {
 	var src string
 
 	if t.Filter != "" {
+		Trace("Applying the filter \"%s\" to %s\n", t.Filter, t.Output)
 		var cmd = exec.Command("/bin/sh", "-c", t.Filter)
 		var stdin = Check2(cmd.StdinPipe())
 		var stdout = Check2(cmd.StdoutPipe())
@@ -230,5 +221,8 @@ func (t Target1) MaybeBuild(env Env) (bool, Env, time.Time) {
 	}
 	env.Variables[normalizePath(t.Output)] = src
 
+	if needsBuild {
+		fmt.Printf("Built target \"%s\"\n", t.Output)
+	}
 	return needsBuild, env, thisTime
 }
