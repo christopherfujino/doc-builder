@@ -153,7 +153,7 @@ func (t Target1) MaybeBuild(env Env) (bool, Env, time.Time) {
 		}
 
 		if templateTime.After(thisTime) {
-			Trace("Target %s needs to be built because template %s is newer\n", t.Output, t.Template)
+			Trace("Target %s (%v) needs to be built because template %s (%v) is newer\n", t.Output, thisTime, t.Template, templateTime)
 			needsBuild = true
 		}
 	}
@@ -166,12 +166,9 @@ func (t Target1) MaybeBuild(env Env) (bool, Env, time.Time) {
 				input = Target2{Filename: inputName}
 			}
 			didBuild, env, inputTime = input.MaybeBuild(env)
-			if inputTime.Equal(thisTime) {
-				// Unclear what to do in this case
-				panic("Are you on Windows?!")
-			}
+			// These could be equal if last modified is from the commit
 			if didBuild || (inputTime.After(thisTime)) {
-				Trace("Target %s needs to be built because of input %s\n", t.Output, inputName)
+				Trace("Target %s (%v) needs to be built because of input %s (%v)\n", t.Output, thisTime, inputName, inputTime)
 				needsBuild = true
 			}
 		}
