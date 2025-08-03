@@ -137,7 +137,7 @@ func (t Target1) Build(env Env) Env {
 
 func (t Target1) MaybeBuild(env Env) (bool, Env, time.Time) {
 	Trace("Evaluating if %s needs a build...\n", t.Output)
-	var needsBuild = false
+	var needsBuild = ensureMode
 	var thisTime, ok = t.Age()
 	if !ok {
 		Trace("Target %s needs to be built because it does not exist\n", t.Output)

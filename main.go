@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"hash/fnv"
 	"os"
 )
 
@@ -20,27 +21,25 @@ func Check1(e error) {
 	}
 }
 
-func selectTarget(targets []Target1) Target1 {
-	const noSuchTarget = "__NO_SUCH_TARGET__"
-	var targetPtr = flag.String("target", noSuchTarget, "usage")
+func handleArgs(targets []Target1) Target1 {
+	const noSuchTarget = "__FIRST_IN_DBC__"
+	var targetName string
+	flag.StringVar(&targetName, "target", noSuchTarget, "target to build")
+	flag.BoolVar(&ensureMode, "ensure", false, "performs a build and returns non-zero exit code if the build changed the target")
 
 	flag.Parse()
 
-	if targetPtr == nil {
-		panic("NPE")
-	}
-
-	if *targetPtr == noSuchTarget {
+	if targetName == noSuchTarget {
 		return targets[0]
 	}
 
 	for _, target := range targets {
 		// TODO strip leading "./"
-		if *targetPtr == target.Output {
+		if targetName == target.Output {
 			return target
 		}
 	}
-	panic(fmt.Sprintf("There is no target named %s", *targetPtr))
+	panic(fmt.Sprintf("There is no target named %s", targetName))
 }
 
 func main() {
@@ -64,21 +63,44 @@ func main() {
 		os.Exit(1)
 	}
 
-	var selectTarget = selectTarget(config.Targets)
+	var preTargetHash uint64
+	var selectTarget = handleArgs(config.Targets)
+	if ensureMode {
+		var h = fnv.New64a()
+		var targetBytes, err = os.ReadFile(selectTarget.Output)
+		if err != nil {
+			panic(fmt.Sprintf("In ensure mode, but the target %s does not even exist", selectTarget.Output))
+		} else {
+			Check2(h.Write(targetBytes))
+			preTargetHash = h.Sum64()
+		}
+	}
 
 	didBuild, _, _ := selectTarget.MaybeBuild(Env{
 		Targets:   targetsMap,
 		Variables: config.Variables,
 	})
-	//fmt.Println(env)
-	var exitCode = 0
-	if didBuild {
-		// Calling `doc-builder` in a CI script is a way to ensure everything is
-		// built, lest it returns 1
-		exitCode = 1
+
+	if ensureMode {
+		if !didBuild {
+			panic("Unreachable")
+		}
+		var h = fnv.New64a()
+		var targetBytes, err = os.ReadFile(selectTarget.Output)
+		if err != nil {
+			panic(fmt.Sprintf("The target %s does not exist", selectTarget.Output))
+		}
+		Check2(h.Write(targetBytes))
+		var postTargetHash = h.Sum64()
+		if preTargetHash != postTargetHash {
+			// TODO diff
+			panic(fmt.Sprintf("The target %s changed after build", selectTarget.Output))
+		} else {
+			Trace("The target %s did not change after a build\n", selectTarget.Output)
+		}
 	}
 
-	os.Exit(exitCode)
+	os.Exit(0)
 }
 
 func findConfigFile(dir string) string {
