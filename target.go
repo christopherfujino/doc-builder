@@ -103,6 +103,8 @@ func normalizePath(path string) string {
 			fallthrough
 		case '/':
 			fallthrough
+		case '-':
+			fallthrough
 		case '\\':
 			buf.WriteRune('_')
 		default:
