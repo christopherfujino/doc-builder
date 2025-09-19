@@ -1,0 +1,27 @@
+#!/usr/bin/env sloth
+
+let version = (<- './VERSION').trim()
+
+for os in ['linux'] {
+  for arch in ['amd64', 'arm64'] {
+    let outputDirRelative = "db-${version}-${os}-${arch}"
+    let outputDir = "./ignore/${outputDirRelative}"
+    let outputTarball = "./ignore/${outputDirRelative}.tar.gz"
+
+    "mkdir -p ${outputDir}"!
+
+    # Build
+    with ($env = $env.merge({
+      "GOOS": os,
+      "GOARCH": arch,
+    })) {
+      "go build -o ${outputDir}/db ."!
+    }
+
+    "cp ./LICENSE ${outputDir}"!
+
+    "tar cvzf ${outputTarball} -C ignore ${outputDirRelative}"!
+
+    "rm -r ${outputDir}"
+  }
+}
