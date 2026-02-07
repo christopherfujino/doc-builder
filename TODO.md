@@ -1,2 +1,3 @@
--[ ] The config file should always be an input to every target.
--[ ] Support custom templating syntax.
+-[ ] fix: The config file should always be an input to every target.
+-[ ] feat: custom templating syntax.
+-[ ] feat: development server
