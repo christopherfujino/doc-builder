@@ -48,7 +48,7 @@ func main() {
 	// Find config file
 	var configFile = findConfigFile(cwd)
 	var configBytes = Check2(os.ReadFile(configFile))
-	var config = ConfigOfBytes(configBytes)
+	var config = Check2(ConfigOfBytes(configBytes))
 	var targetsMap = map[string]Target{}
 	for _, target := range config.Targets {
 		targetsMap[target.Output] = target

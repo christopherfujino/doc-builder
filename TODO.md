@@ -1,0 +1,1 @@
+-[ ] The config file should always be an input to every target.

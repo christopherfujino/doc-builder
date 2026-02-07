@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 )
 
 type Config struct {
@@ -9,11 +10,16 @@ type Config struct {
 	Variables map[string]string
 }
 
-func ConfigOfBytes(data []byte) Config {
+func ConfigOfBytes(data []byte) (Config, error) {
 	var c Config
 	Check1(json.Unmarshal(data, &c))
 	if c.Variables == nil {
 		c.Variables = map[string]string{}
 	}
-	return c
+	for _, target := range c.Targets {
+		if target.Output == "" {
+			return Config{}, errors.New("Target does not have an output configured")
+		}
+	}
+	return c, nil
 }
