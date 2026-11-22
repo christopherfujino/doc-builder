@@ -8,3 +8,6 @@ vet:V:
 
 run:V: db
   ./db
+
+clean:V:
+  rm db
