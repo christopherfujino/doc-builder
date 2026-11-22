@@ -1,7 +1,8 @@
 all:V: build vet
 
 build:V:
-  go build -o db .
+  # https://github.com/microsoft/azurelinux/issues/3273
+  go build -buildvcs=false -o db .
 
 vet:V:
   go vet .
